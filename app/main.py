@@ -1,18 +1,35 @@
+from enum import Enum
+
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
 app = FastAPI()
 
 
-class Task(BaseModel):
-    title: str
-    description: str
-    priority: str
+class Priority(str, Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    description: str = Field(min_length=1, max_length=500)
+    priority: Priority
+
+
+class Task(TaskCreate):
+    id: int
+    completed: bool = False
+
 
 tasks = []
+
 
 @app.get("/")
 def root():
     return {"message": "DevOps Task Manager is running"}
+
 
 @app.get("/health")
 def health():
@@ -20,9 +37,19 @@ def health():
 
 
 @app.post("/tasks")
-def create_task(task: Task):
-    tasks.append(task)
-    return task
+def create_task(task: TaskCreate):
+    task_id = len(tasks) + 1
+
+    new_task = Task(
+        id=task_id,
+        title=task.title,
+        description=task.description,
+        priority=task.priority,
+    )
+
+    tasks.append(new_task)
+
+    return new_task
 
 
 @app.get("/tasks")
